@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>时间管理大师</title>
+  <link rel="stylesheet" href="css/style.css?v=10">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="RR时间管理">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#10b981">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png">
+</head>
+<body>
+  <div class="app-container">
+    <!-- ========== 顶部头部 ========== -->
+    <header class="app-header">
+      <div class="header-top">
+        <h1 class="app-name">时间管理大师</h1>
+        <button class="btn-settings" id="btnSettings" onclick="document.getElementById('backupModal').classList.add('active')">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="3" stroke="currentColor" stroke-width="2"/><path d="M10 2v2M10 16v2M3.5 5.5l1.4 1.4M15.1 13.1l1.4 1.4M2 10h2M16 10h2M3.5 14.5l1.4-1.4M15.1 6.9l1.4-1.4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <span class="app-date" id="headerDate"></span>
+      <span style="position:absolute;right:48px;top:50%;transform:translateY(-50%);font-size:.55rem;opacity:.5;letter-spacing:.05em">v13</span>
+    </header>
+
+    <!-- ========== 主内容区 ========== -->
+    <main class="app-main" id="appMain">
+      <!-- 模块1: 每周计划制定 -->
+      <section class="tab-section" id="tab-weekly-plans">
+        <div class="module-header">
+          <h2 class="section-title">每周计划</h2>
+          <div class="module-nav" id="weeklyPlanNav"></div>
+        </div>
+        <div class="weekly-list" id="weeklyPlanList"></div>
+      </section>
+
+      <!-- 模块2: 每日计划制定 -->
+      <section class="tab-section" id="tab-daily-plans">
+        <div class="module-header">
+          <h2 class="section-title">每日计划</h2>
+          <div class="module-nav" id="dailyPlanNav"></div>
+        </div>
+        <div class="category-bar" id="dailyCatBar"></div>
+        <div class="daily-list" id="dailyPlanList"></div>
+      </section>
+
+      <!-- 模块3: 每日时间轴 -->
+      <section class="tab-section" id="tab-timeline">
+        <div class="module-header">
+          <h2 class="section-title" id="timelineTitle">今天</h2>
+          <div class="module-nav" id="timelineNav"></div>
+        </div>
+        <div class="timeline-container">
+          <div class="timeline-scroll" id="timelineScroll">
+            <div id="timelineContent"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 模块4: 周视图 -->
+      <section class="tab-section" id="tab-week-view">
+        <div class="module-header">
+          <h2 class="section-title" id="weekViewTitle"></h2>
+          <div class="module-nav" id="weekViewNav"></div>
+        </div>
+        <div class="week-compact" id="weekCompact">
+          <div class="week-compact-scroll" id="weekCompactScroll"></div>
+        </div>
+      </section>
+
+      <!-- 模块5: 时间统计 -->
+      <section class="tab-section" id="tab-stats">
+        <div class="module-header">
+          <h2 class="section-title">时间统计</h2>
+          <div class="module-nav" id="statsNavOuter"></div>
+        </div>
+        <div class="stats-toggle-bar">
+          <button class="stats-toggle-btn active" data-view="day">日</button>
+          <button class="stats-toggle-btn" data-view="month">月</button>
+          <button class="stats-toggle-btn" data-view="year">年</button>
+        </div>
+        <div class="stats-extra-nav" id="statsExtraNav"></div>
+        <div class="stats-notice" id="statsNotice"></div>
+        <div class="stats-cards" id="statsCards"></div>
+        <div id="statsDayContent" class="stats-view active">
+          <div class="chart-card"><h4 id="dayPieTitle">分类时间占比</h4><div class="chart-wrap"><canvas id="dayPieChart"></canvas></div></div>
+        </div>
+        <div id="statsMonthContent" class="stats-view">
+          <div class="chart-card"><h4 id="monthPieTitle">分类时间占比</h4><div class="chart-wrap"><canvas id="monthPieChart"></canvas></div></div>
+        </div>
+        <div id="statsYearContent" class="stats-view">
+          <div class="chart-card">
+            <h4>
+              月度时间投入
+              <select id="yearCatFilter" style="display:inline-block;width:auto;padding:4px 10px;border:1.5px solid var(--border2);border-radius:8px;font-size:.82rem;font-family:inherit;margin-left:8px;color:var(--text);background:var(--g50);outline:none;"></select>
+            </h4>
+            <div class="chart-wrap" style="height:260px;"><canvas id="yearBarChart"></canvas></div>
+          </div>
+          <div class="chart-card"><h4>全年分类占比</h4><div class="chart-wrap"><canvas id="yearPieChart"></canvas></div></div>
+        </div>
+      </section>
+    </main>
+
+    <!-- ========== 底部导航 ========== -->
+    <nav class="bottom-nav">
+      <button class="bn-tab active" data-tab="weekly-plans">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="8" y="2" width="8" height="4" rx="1" stroke="currentColor" stroke-width="2"/><rect x="3" y="6" width="18" height="15" rx="2" stroke="currentColor" stroke-width="2"/><path d="M8 12h8M8 16h5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <span>周计划</span>
+      </button>
+      <button class="bn-tab" data-tab="daily-plans">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <span>日计划</span>
+      </button>
+      <button class="bn-tab" data-tab="timeline">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M12 6v6l4 2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <span>时间轴</span>
+      </button>
+      <button class="bn-tab" data-tab="week-view">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/><path d="M3 10h18M8 2v4M16 2v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <span>周视图</span>
+      </button>
+      <button class="bn-tab" data-tab="stats">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M5 18V10M12 18V4M19 18v-6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+        <span>统计</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- ========== 弹窗: 周计划编辑 ========== -->
+  <div class="modal-overlay" id="weeklyPlanModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="weeklyModalTitle">新建周计划</h3>
+        <button class="btn-icon modal-close" data-close="weeklyPlanModal">
+          <svg width="20" height="20" viewBox="0 0 20 20"><path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <form class="modal-body" id="weeklyPlanForm">
+        <input type="hidden" id="weeklyPlanId">
+        <div class="form-group">
+          <label>计划标题</label>
+          <input type="text" id="weeklyPlanTitle" placeholder="本周目标" required>
+        </div>
+        <div class="form-group">
+          <label>分类</label>
+          <select id="weeklyPlanCategory" required></select>
+        </div>
+        <div class="form-group">
+          <label>目标次数</label>
+          <select id="weeklyPlanTarget">
+            <option value="1">1 次</option>
+            <option value="2">2 次</option>
+            <option value="3">3 次</option>
+            <option value="4">4 次</option>
+            <option value="5">5 次</option>
+            <option value="6">6 次</option>
+            <option value="7">7 次</option>
+            <option value="8">8 次</option>
+            <option value="9">9 次</option>
+            <option value="10">10 次</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>备注</label>
+          <textarea id="weeklyPlanNote" rows="2" placeholder="补充说明..."></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-ghost" data-close="weeklyPlanModal">取消</button>
+          <button type="button" class="btn-primary" onclick="saveWeeklyPlan()">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========== 弹窗: 日计划/时间轴事件编辑 ========== -->
+  <div class="modal-overlay" id="planModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="planModalTitle">新建计划</h3>
+        <button class="btn-icon modal-close" data-close="planModal">
+          <svg width="20" height="20" viewBox="0 0 20 20"><path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <form class="modal-body" id="planForm">
+        <input type="hidden" id="planId">
+        <input type="hidden" id="planMode" value="plan">
+        <div class="form-group">
+          <label>计划标题</label>
+          <input type="text" id="planTitle" placeholder="要做什么？" required>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>分类</label>
+            <select id="planCategory" required></select>
+          </div>
+          <div class="form-group">
+            <label>优先级</label>
+            <select id="planPriority">
+              <option value="high">高</option>
+              <option value="medium" selected>中</option>
+              <option value="low">低</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>日期</label>
+          <input type="date" id="planDate" required>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>开始</label>
+            <input type="time" id="planStart" required>
+          </div>
+          <div class="form-group">
+            <label>结束</label>
+            <input type="time" id="planEnd" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>备注</label>
+          <textarea id="planNote" rows="2" placeholder="补充说明..."></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-ghost" data-close="planModal">取消</button>
+          <button type="button" class="btn-danger" id="btnDeleteEvent" style="display:none;margin-right:auto" onclick="deleteTimelineEvent()">删除</button>
+          <button type="button" class="btn-primary" onclick="saveDailyPlan()">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========== 弹窗: 分类管理 ========== -->
+  <div class="modal-overlay" id="categoryModal">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h3 id="categoryModalTitle">新增分类</h3>
+        <button class="btn-icon modal-close" data-close="categoryModal">
+          <svg width="20" height="20" viewBox="0 0 20 20"><path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <form class="modal-body" id="categoryForm">
+        <input type="hidden" id="categoryId">
+        <div class="form-group">
+          <label>分类名称</label>
+          <input type="text" id="categoryName" placeholder="工作/学习/生活/运动..." required>
+        </div>
+        <div class="form-group">
+          <label>颜色</label>
+          <div class="color-picker" id="colorPicker"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-ghost" data-close="categoryModal">取消</button>
+          <button type="button" class="btn-primary" onclick="saveCategory()">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========== 弹窗: 数据备份 ========== -->
+  <div class="modal-overlay" id="backupModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>数据备份</h3>
+        <button class="btn-icon modal-close" data-close="backupModal">
+          <svg width="20" height="20" viewBox="0 0 20 20"><path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <!-- 手动备份 -->
+        <div style="text-align:center;margin-bottom:20px">
+          <p style="font-size:.82rem;color:var(--muted);margin-bottom:12px">导出所有数据为文件保存到 iCloud，换手机或清缓存后可一键恢复。</p>
+          <div style="display:flex;gap:10px">
+            <button class="btn-primary" onclick="doExport()" id="btnExport" style="flex:1;justify-content:center">
+              <svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 10V2M3 7l5 5 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 13h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              导出备份
+            </button>
+            <button class="btn-outline" onclick="doImport()" id="btnImport" style="flex:1;justify-content:center">
+              <svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 2v8M3 5l5 5 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 13h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              导入恢复
+            </button>
+            <input type="file" id="importFile" accept=".json" onchange="handleImport(event)" style="display:none">
+          </div>
+        </div>
+
+        <!-- 分隔线 -->
+        <div style="border-top:1px solid var(--border);margin:20px 0"></div>
+
+        <!-- 备份提醒设置 -->
+        <div style="margin-bottom:18px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <div>
+              <span style="font-size:.88rem;font-weight:600;color:var(--g800)">备份提醒</span>
+              <p style="font-size:.68rem;color:var(--muted);margin-top:2px">开启后定时提醒你手动导出备份到 iCloud</p>
+            </div>
+            <div class="toggle-switch" id="backupReminderToggle" onclick="toggleBackupReminder()">
+              <span class="toggle-track"><span class="toggle-thumb"></span></span>
+            </div>
+          </div>
+          <div id="backupReminderOptions" style="display:none;margin-top:12px">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+              <span style="font-size:.78rem;color:var(--text);white-space:nowrap">提醒频率</span>
+              <select id="reminderFrequency" onchange="setReminderFreq(this.value)" style="flex:1;padding:6px 12px;border:1.5px solid var(--border2);border-radius:8px;font-size:.78rem;font-family:inherit;color:var(--text);background:var(--g50);outline:none">
+                <option value="daily">每天提醒</option>
+                <option value="weekly">每周提醒</option>
+              </select>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <span style="font-size:.72rem;color:var(--muted)" id="lastBackupLabel">尚未备份</span>
+              <button class="btn-outline" onclick="doExport()" style="padding:4px 10px;font-size:.72rem">
+                <svg width="12" height="12" viewBox="0 0 16 16"><path d="M8 10V2M3 7l5 5 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                立即备份
+              </button>
+            </div>
+          </div>
+        </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script>
+    /* ===== 数据备份（内联，不依赖 app.js 缓存） ===== */
+
+    var BACKUP_KEY = 'rr_time_master_settings';
+
+    function getBackupSettings() {
+      try {
+        var raw = localStorage.getItem(BACKUP_KEY);
+        if (raw) return JSON.parse(raw);
+      } catch(e) {}
+      return { autoBackup: false, backupFrequency: 'daily', lastBackup: null };
+    }
+
+    function saveBackupSettings(s) {
+      localStorage.setItem(BACKUP_KEY, JSON.stringify(s));
+    }
+
+    function doExport() {
+      var raw = localStorage.getItem('rr_time_master') || '{}';
+      var all;
+      try { all = JSON.parse(raw); } catch(e) { all = {}; }
+      var data = {
+        version: 4,
+        exportedAt: new Date().toISOString(),
+        categories: all.categories || [],
+        plans: all.plans || [],
+        weeklyPlans: all.weeklyPlans || [],
+        timelineEvents: all.timelineEvents || [],
+      };
+      var blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'rr-time-backup-' + new Date().toISOString().slice(0,10) + '.json';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 200);
+
+      // 记录备份时间
+      var s = getBackupSettings();
+      s.lastBackup = new Date().toISOString();
+      saveBackupSettings(s);
+      updateBackupUI();
+
+      if (typeof Toast !== 'undefined') Toast.show('备份已导出');
+      document.getElementById('backupModal').classList.remove('active');
+    }
+
+    function doImport() {
+      document.getElementById('importFile').click();
+    }
+
+    function handleImport(e) {
+      var file = e.target.files[0];
+      if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function(ev) {
+        try {
+          var data = JSON.parse(ev.target.result);
+          if (!data.categories && !data.plans && !data.weeklyPlans) throw new Error('bad');
+          if (!confirm('导入将覆盖当前所有数据，确定继续？')) return;
+          var save = {
+            categories: data.categories || [],
+            plans: data.plans || [],
+            weeklyPlans: data.weeklyPlans || [],
+            timelineEvents: data.timelineEvents || [],
+          };
+          localStorage.setItem('rr_time_master', JSON.stringify(save));
+          document.getElementById('backupModal').classList.remove('active');
+          alert('数据已恢复，页面将自动刷新。');
+          location.reload();
+        } catch(err) {
+          alert('备份文件格式错误，请确认选择了正确的 .json 备份文件。');
+        }
+      };
+      reader.readAsText(file);
+      e.target.value = '';
+    }
+
+    /* ===== 备份提醒 ===== */
+
+    function toggleBackupReminder() {
+      var s = getBackupSettings();
+      s.autoBackup = !s.autoBackup;
+      saveBackupSettings(s);
+      updateBackupUI();
+      if (s.autoBackup) {
+        scheduleReminderCheck();
+      } else {
+        if (_backupTimer) { clearTimeout(_backupTimer); _backupTimer = null; }
+      }
+    }
+
+    function setReminderFreq(v) {
+      var s = getBackupSettings();
+      s.backupFrequency = v;
+      saveBackupSettings(s);
+      scheduleReminderCheck();
+    }
+
+    function updateBackupUI() {
+      var s = getBackupSettings();
+      var opts = document.getElementById('backupReminderOptions');
+      var freq = document.getElementById('reminderFrequency');
+      var label = document.getElementById('lastBackupLabel');
+      var toggle = document.getElementById('backupReminderToggle');
+
+      if (opts) opts.style.display = s.autoBackup ? 'block' : 'none';
+      if (freq) freq.value = s.backupFrequency || 'daily';
+      if (toggle) toggle.classList.toggle('active', s.autoBackup);
+
+      if (label && s.lastBackup) {
+        var d = new Date(s.lastBackup);
+        label.textContent = '上次备份：' + formatDateFriendly(s.lastBackup) + ' ' +
+          String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+      } else if (label) {
+        label.textContent = '尚未备份';
+      }
+    }
+
+    function isBackupDue() {
+      var s = getBackupSettings();
+      if (!s.autoBackup) return false;
+      if (!s.lastBackup) return true;
+      var last = new Date(s.lastBackup).getTime();
+      var now = Date.now();
+      var interval = s.backupFrequency === 'weekly' ? 7 * 24 * 3600 * 1000 : 24 * 3600 * 1000;
+      return (now - last) > interval;
+    }
+
+    var _backupTimer = null;
+
+    function scheduleReminderCheck() {
+      if (_backupTimer) clearTimeout(_backupTimer);
+      var s = getBackupSettings();
+      if (!s.autoBackup) return;
+      // 每小时检查一次
+      _backupTimer = setInterval(function() {
+        if (isBackupDue()) showBackupReminder();
+      }, 3600000);
+    }
+
+    function showBackupReminder() {
+      if (document.querySelector('.backup-reminder-overlay')) return;
+      var s = getBackupSettings();
+      var freqText = s.backupFrequency === 'weekly' ? '一周' : '一天';
+      var overlay = document.createElement('div');
+      overlay.className = 'backup-reminder-overlay';
+      overlay.innerHTML = '<div class="backup-reminder">' +
+        '<div style="text-align:center;margin-bottom:12px">' +
+        '<svg width="32" height="32" viewBox="0 0 32 32" fill="none">' +
+        '<circle cx="16" cy="16" r="14" fill="#fef3c7" stroke="#f59e0b" stroke-width="2"/>' +
+        '<path d="M14 10h4l-1 8h-2l-1-8zM14 21h4v4h-4v-4z" fill="#f59e0b"/>' +
+        '</svg></div>' +
+        '<p style="font-size:.88rem;font-weight:600;color:var(--g800);text-align:center;margin-bottom:6px">备份提醒</p>' +
+        '<p style="font-size:.78rem;color:var(--muted);text-align:center;margin-bottom:16px">距上次备份已超过' + freqText + '，建议导出备份到 iCloud 保存。</p>' +
+        '<div style="display:flex;gap:10px">' +
+        '<button class="btn-ghost" style="flex:1" onclick="this.closest(\'.backup-reminder-overlay\').remove()">稍后</button>' +
+        '<button class="btn-primary" style="flex:1" onclick="this.closest(\'.backup-reminder-overlay\').remove();doExport()">立即备份</button>' +
+        '</div></div>';
+      document.body.appendChild(overlay);
+      overlay.addEventListener('click', function(e) {
+        if (e.target === overlay) overlay.remove();
+      });
+    }
+
+    // 页面加载时初始化
+    document.addEventListener('DOMContentLoaded', function() {
+      updateBackupUI();
+      scheduleReminderCheck();
+      // 启动延迟检查：如果已到期，弹提醒
+      setTimeout(function() {
+        if (isBackupDue()) showBackupReminder();
+      }, 3000);
+    });
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="js/data.js?v=13"></script>
+  <script src="js/weeklyPlans.js?v=13"></script>
+  <script src="js/dailyPlans.js?v=13"></script>
+  <script src="js/timeline.js?v=13"></script>
+  <script src="js/weekView.js?v=13"></script>
+  <script src="js/stats.js?v=13"></script>
+  <script src="js/app.js?v=13"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/service-worker.js').then(function(reg) {
+        // 检测到新的 SW 后自动更新
+        reg.addEventListener('updatefound', function() {
+          var worker = reg.installing;
+          worker.addEventListener('statechange', function() {
+            if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+              worker.postMessage('skip-waiting');
+              // 页面刷新以加载新版本（延迟1秒确保SW接管）
+              setTimeout(function() { location.reload(); }, 500);
+            }
+          });
+        });
+      });
+      // 每5分钟检查一次更新
+      setInterval(function() {
+        navigator.serviceWorker.getRegistration().then(function(r) {
+          if (r) r.update();
+        });
+      }, 300000);
+    }
+  </script>
+  <!-- ===== 表单保存逻辑（内联，零缓存依赖） ===== -->
+  <script>
+    /* 确保所有模块已就绪后再绑定 */
+    function _ready() {
+      return typeof Store !== 'undefined' && typeof App !== 'undefined';
+    }
+
+    function saveWeeklyPlan() {
+      if (!_ready()) { alert('应用正在加载，请稍后再试'); return; }
+      var id = document.getElementById('weeklyPlanId').value;
+      var title = document.getElementById('weeklyPlanTitle').value.trim();
+      if (!title) { alert('请输入计划标题'); return; }
+      var data = {
+        title: title,
+        categoryId: document.getElementById('weeklyPlanCategory').value,
+        target: parseInt(document.getElementById('weeklyPlanTarget').value) || 1,
+        note: document.getElementById('weeklyPlanNote').value.trim(),
+        weekStart: getMondayStr(WeeklyPlans.currentMonday),
+      };
+      if (id) { Store.updateWeekly(id, data); Toast.show('已更新'); }
+      else { data.progress = 0; data.completed = false; Store.addWeekly(data); Toast.show('已创建'); }
+      App.closeModal('weeklyPlanModal');
+      WeeklyPlans.refresh();
+    }
+
+    function saveDailyPlan() {
+      if (!_ready()) { alert('应用正在加载，请稍后再试'); return; }
+      // 如果是时间轴事件模式，走独立保存逻辑
+      var mode = document.getElementById('planMode').value;
+      if (mode === 'event') { saveTimelineEvent(); return; }
+      var id = document.getElementById('planId').value;
+      var title = document.getElementById('planTitle').value.trim();
+      if (!title) { alert('请输入计划标题'); return; }
+      var start = document.getElementById('planStart').value;
+      var end = document.getElementById('planEnd').value;
+      if (timeToMin(end) <= timeToMin(start)) { alert('结束时间必须晚于开始时间'); return; }
+      var data = {
+        title: title,
+        categoryId: document.getElementById('planCategory').value,
+        date: document.getElementById('planDate').value,
+        startTime: start, endTime: end,
+        priority: document.getElementById('planPriority').value,
+        note: document.getElementById('planNote').value.trim(),
+      };
+      try {
+        if (id) { Store.updatePlan(id, data); Toast.show('已更新'); }
+        else { Store.addPlan(data); Toast.show('已创建'); }
+      } catch(err) {
+        alert('保存失败: ' + err.message);
+        return;
+      }
+      App.closeModal('planModal');
+      // 刷新所有相关视图（容错，某个模块未初始化则跳过）
+      try { DailyPlans.refresh(); } catch(e) {}
+      try { Timeline.refresh(); } catch(e) {}
+      try { WeekView.refresh(); } catch(e) {}
+      try { if (App.currentTab === 'stats') Stats.refresh(); } catch(e) {}
+    }
+
+    function saveTimelineEvent() {
+      if (!_ready()) { alert('应用正在加载，请稍后再试'); return; }
+      var id = document.getElementById('planId').value;
+      var title = document.getElementById('planTitle').value.trim();
+      if (!title) { alert('请输入标题'); return; }
+      var start = document.getElementById('planStart').value;
+      var end = document.getElementById('planEnd').value;
+      if (timeToMin(end) <= timeToMin(start)) { alert('结束时间必须晚于开始时间'); return; }
+      var data = {
+        title: title,
+        categoryId: document.getElementById('planCategory').value,
+        date: document.getElementById('planDate').value,
+        startTime: start, endTime: end,
+        note: document.getElementById('planNote').value.trim(),
+      };
+      try {
+        if (id) { Store.updateTimelineEvent(id, data); Toast.show('已更新'); }
+        else { Store.addTimelineEvent(data); Toast.show('已记录'); }
+      } catch(err) {
+        alert('保存失败: ' + err.message);
+        return;
+      }
+      App.closeModal('planModal');
+      try { Timeline.refresh(); } catch(e) {}
+    }
+
+    function deleteTimelineEvent() {
+      var id = document.getElementById('planId').value;
+      if (!id) return;
+      if (!confirm('确定要删除这条时间记录吗？')) return;
+      Store.deleteTimelineEvent(id);
+      Toast.show('已删除');
+      App.closeModal('planModal');
+      try { Timeline.refresh(); } catch(e) {}
+      try { if (App.currentTab === 'stats') Stats.refresh(); } catch(e) {}
+    }
+    
+    function saveCategory() {
+      if (!_ready()) { alert('应用正在加载，请稍后再试'); return; }
+      var id = document.getElementById('categoryId').value;
+      var name = document.getElementById('categoryName').value.trim();
+      if (!name) { alert('请输入分类名称'); return; }
+      var colorEl = document.querySelector('.color-option.selected');
+      var color = colorEl ? colorEl.dataset.color : '#10b981';
+      if (id) { Store.updateCategory(id, name, color); Toast.show('已更新'); }
+      else { Store.addCategory(name, color); Toast.show('已创建'); }
+      App.closeModal('categoryModal');
+      try { DailyPlans.refresh(); } catch(e) {}
+    }
+
+    function deleteCategory(catId) {
+      if (!_ready()) { alert('应用正在加载，请稍后再试'); return; }
+      var cat = Store.getCategory(catId);
+      var catName = cat ? cat.name : '该分类';
+      if (!confirm('确定要删除「' + catName + '」分类吗？\n\n已有计划不会被删除，但会变为"未分类"。')) return;
+      Store.deleteCategory(catId);
+      Toast.show('「' + catName + '」已删除');
+      // 如果当前正在按此分类过滤，清除过滤
+      if (typeof DailyPlans !== 'undefined' && DailyPlans.filterCat === catId) {
+        DailyPlans.filterCat = '';
+      }
+      // 刷新所有相关视图
+      try { DailyPlans.refresh(); } catch(e) {}
+      try { WeeklyPlans.refresh(); } catch(e) {}
+      try { Timeline.refresh(); } catch(e) {}
+      try { WeekView.refresh(); } catch(e) {}
+      try { if (typeof App !== 'undefined' && App.currentTab === 'stats' && typeof Stats !== 'undefined') Stats.refresh(); } catch(e) {}
+    }
+  </script>
+</body>
+</html>
