@@ -99,6 +99,51 @@ const Store = {
   toggleWeekly(id) { const d=this.load(); if(!d.weeklyPlans)d.weeklyPlans=[]; const w=d.weeklyPlans.find(w=>w.id===id); if(w){w.completed=!w.completed;this.save(d);return w.completed;} return false; },
   incrementWeekly(id) { const d=this.load(); if(!d.weeklyPlans)d.weeklyPlans=[]; const w=d.weeklyPlans.find(w=>w.id===id); if(!w) return null; const t=w.target||1; if(w.progress===undefined)w.progress=0; if(w.progress<t){w.progress++;w.completed=false;} if(w.progress>=t){w.progress=t;w.completed=true;} this.save(d); return {progress:w.progress, completed:w.completed, target:t}; },
 
+  /* ===== 周计划延续（上周未完成 → 本周） ===== */
+  carryOverWeeklyPlans(currentWeekStart) {
+    const d = this.load();
+    if (!d.weeklyPlans) d.weeklyPlans = [];
+
+    // 计算上周的 Monday 字符串
+    const curMon = new Date(currentWeekStart);
+    const prevMon = new Date(curMon);
+    prevMon.setDate(prevMon.getDate() - 7);
+    const prevWeekStart = `${prevMon.getFullYear()}-${pad2(prevMon.getMonth()+1)}-${pad2(prevMon.getDate())}`;
+
+    // 找出上周未完成的计划
+    const uncompleted = d.weeklyPlans.filter(w =>
+      w.weekStart === prevWeekStart && !w.completed
+    );
+    if (uncompleted.length === 0) return 0;
+
+    // 检查哪些已经被延续过（按原始计划 ID 去重）
+    let added = 0;
+    uncompleted.forEach(w => {
+      const alreadyCarried = d.weeklyPlans.some(x =>
+        x.weekStart === currentWeekStart && x.carriedFromId === w.id
+      );
+      if (!alreadyCarried) {
+        d.weeklyPlans.push({
+          id: 'wplan_' + Date.now() + '_' + added,
+          title: w.title,
+          categoryId: w.categoryId,
+          weekStart: currentWeekStart,
+          completed: false,
+          note: w.note || '',
+          target: w.target || 1,
+          progress: 0,
+          carriedOver: true,
+          carriedFrom: prevWeekStart,
+          carriedFromId: w.id,
+        });
+        added++;
+      }
+    });
+
+    if (added > 0) this.save(d);
+    return added;
+  },
+
   /* ===== 时间轴事件（与计划独立） ===== */
   getTimelineEvents() { return this.load().timelineEvents || []; },
   addTimelineEvent(ev) { const d=this.load(); if(!d.timelineEvents)d.timelineEvents=[]; ev.id='tev_'+Date.now(); d.timelineEvents.push(ev); this.save(d); return ev; },

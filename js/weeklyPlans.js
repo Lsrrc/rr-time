@@ -27,6 +27,11 @@ const WeeklyPlans = {
 
   renderList() {
     const ws = getMondayStr(this.currentMonday);
+    // 当前周自动延续上周未完成的计划
+    const todayWeekStart = getMondayStr(new Date());
+    if (ws === todayWeekStart) {
+      Store.carryOverWeeklyPlans(ws);
+    }
     const list = Store.getWeeklyPlans().filter(w => w.weekStart === ws);
     const container = document.getElementById('weeklyPlanList');
 
@@ -49,6 +54,7 @@ const WeeklyPlans = {
               <div class="wl-title">${escapeHtml(w.title)}</div>
               <div class="wl-meta">
                 <span class="wl-tag" style="background:${cat.color}1a;color:${cat.color}">${cat.name}</span>
+                ${w.carriedOver ? `<span class="wl-tag" style="background:#fef3c7;color:#b45309">上周延续</span>` : ''}
                 ${isMulti ? `<span class="wl-progress-text">${progress}/${target}</span>` : ''}
                 ${w.note ? `<span style="font-size:.68rem;color:var(--muted)">${escapeHtml(w.note.slice(0,20))}${w.note.length>20?'...':''}</span>` : ''}
               </div>
