@@ -95,7 +95,18 @@ const Store = {
 
   addWeekly(w) { const d=this.load(); w.id='wplan_'+Date.now(); if(!d.weeklyPlans)d.weeklyPlans=[]; d.weeklyPlans.push(w); this.save(d); return w; },
   updateWeekly(id, up) { const d=this.load(); if(!d.weeklyPlans)d.weeklyPlans=[]; const w=d.weeklyPlans.find(w=>w.id===id); if(w){Object.assign(w,up);this.save(d);} return w; },
-  deleteWeekly(id) { const d=this.load(); d.weeklyPlans=(d.weeklyPlans||[]).filter(w=>w.id!==id); this.save(d); },
+  deleteWeekly(id) {
+    const d=this.load();
+    if(!d.weeklyPlans)d.weeklyPlans=[];
+    const w=d.weeklyPlans.find(w=>w.id===id);
+    // 如果删除的是延续计划，记录该延续已被用户主动删除，防止下次渲染时重新创建
+    if(w && w.carriedOver && w.carriedFromId){
+      if(!d.deletedCarryOvers)d.deletedCarryOvers=[];
+      d.deletedCarryOvers.push({weekStart:w.weekStart, sourceId:w.carriedFromId});
+    }
+    d.weeklyPlans=d.weeklyPlans.filter(w=>w.id!==id);
+    this.save(d);
+  },
   toggleWeekly(id) { const d=this.load(); if(!d.weeklyPlans)d.weeklyPlans=[]; const w=d.weeklyPlans.find(w=>w.id===id); if(w){w.completed=!w.completed;this.save(d);return w.completed;} return false; },
   incrementWeekly(id) { const d=this.load(); if(!d.weeklyPlans)d.weeklyPlans=[]; const w=d.weeklyPlans.find(w=>w.id===id); if(!w) return null; const t=w.target||1; if(w.progress===undefined)w.progress=0; if(w.progress<t){w.progress++;w.completed=false;} if(w.progress>=t){w.progress=t;w.completed=true;} this.save(d); return {progress:w.progress, completed:w.completed, target:t}; },
 
@@ -103,6 +114,7 @@ const Store = {
   carryOverWeeklyPlans(currentWeekStart) {
     const d = this.load();
     if (!d.weeklyPlans) d.weeklyPlans = [];
+    if (!d.deletedCarryOvers) d.deletedCarryOvers = [];
 
     // 计算上周的 Monday 字符串
     const curMon = new Date(currentWeekStart);
@@ -116,13 +128,16 @@ const Store = {
     );
     if (uncompleted.length === 0) return 0;
 
-    // 检查哪些已经被延续过（按原始计划 ID 去重）
+    // 检查哪些已经被延续过（按原始计划 ID 去重）或已被用户主动删除
     let added = 0;
     uncompleted.forEach(w => {
       const alreadyCarried = d.weeklyPlans.some(x =>
         x.weekStart === currentWeekStart && x.carriedFromId === w.id
       );
-      if (!alreadyCarried) {
+      const wasDeleted = d.deletedCarryOvers.some(e =>
+        e.weekStart === currentWeekStart && e.sourceId === w.id
+      );
+      if (!alreadyCarried && !wasDeleted) {
         d.weeklyPlans.push({
           id: 'wplan_' + Date.now() + '_' + added,
           title: w.title,
