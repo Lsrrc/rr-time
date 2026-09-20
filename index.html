@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>时间管理大师</title>
-  <link rel="stylesheet" href="css/style.css?v=216">
+  <link rel="stylesheet" href="css/style.css?v=217">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <!-- PWA -->
@@ -29,7 +29,7 @@
         </button>
       </div>
       <span class="app-date" id="headerDate"></span>
-      <span style="position:absolute;right:6px;bottom:3px;font-size:.5rem;opacity:.5;letter-spacing:.05em">V2.16</span>
+      <span style="position:absolute;right:6px;bottom:3px;font-size:.5rem;opacity:.5;letter-spacing:.05em">V2.17</span>
     </header>
 
     <!-- ========== 主内容区 ========== -->
@@ -275,6 +275,11 @@
         </button>
       </div>
       <div class="modal-body">
+        <!-- 云端同步状态 -->
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border:1.5px solid var(--border);border-radius:12px;margin-bottom:16px;background:var(--g50)">
+          <div id="cloudSyncStatus" style="font-size:.78rem"></div>
+          <button class="btn-outline" onclick="if(typeof CloudSync!=='undefined'&&CloudSync._ready){CloudSync.pull(true)}else{Toast.show('云端同步未开启')}" style="padding:4px 10px;font-size:.72rem;white-space:nowrap">立即同步</button>
+        </div>
         <!-- 手动备份 -->
         <div style="text-align:center;margin-bottom:20px">
           <p style="font-size:.82rem;color:var(--muted);margin-bottom:12px">导出所有数据为文件保存到 iCloud，换手机或清缓存后可一键恢复。</p>
@@ -396,6 +401,7 @@
             weeklyPlans: data.weeklyPlans || [],
             timelineEvents: data.timelineEvents || [],
           };
+          save._updatedAt = Date.now(); // 标记为最新，触发云同步推送
           localStorage.setItem('rr_time_master', JSON.stringify(save));
           document.getElementById('backupModal').classList.remove('active');
           alert('数据已恢复，页面将自动刷新。');
@@ -506,13 +512,15 @@
     });
   </script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  <script src="js/data.js?v=216"></script>
-  <script src="js/weeklyPlans.js?v=216"></script>
-  <script src="js/dailyPlans.js?v=216"></script>
-  <script src="js/timeline.js?v=216"></script>
-  <script src="js/weekView.js?v=216"></script>
-  <script src="js/stats.js?v=216"></script>
-  <script src="js/app.js?v=216"></script>
+  <script src="https://static.cloudbase.net/cloudbase-js-sdk/latest/cloudbase.full.js"></script>
+  <script src="js/data.js?v=217"></script>
+  <script src="js/cloudSync.js?v=217"></script>
+  <script src="js/weeklyPlans.js?v=217"></script>
+  <script src="js/dailyPlans.js?v=217"></script>
+  <script src="js/timeline.js?v=217"></script>
+  <script src="js/weekView.js?v=217"></script>
+  <script src="js/stats.js?v=217"></script>
+  <script src="js/app.js?v=217"></script>
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/service-worker.js').then(function(reg) {
