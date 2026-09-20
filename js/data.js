@@ -56,11 +56,7 @@ const Store = {
     return { categories:[...this.DEFAULT_CATEGORIES], plans:[...this.DEFAULT_PLANS], weeklyPlans:[...this.DEFAULT_WEEKLY], timelineEvents:[...this.DEFAULT_TIMELINE_EVENTS] };
   },
 
-  save(d) {
-    d._updatedAt = Date.now(); // 同步用时间戳（CloudSync 依赖）
-    localStorage.setItem(this.KEY, JSON.stringify(d));
-    if (typeof CloudSync !== 'undefined' && CloudSync._ready) CloudSync.schedulePush();
-  },
+  save(d) { localStorage.setItem(this.KEY, JSON.stringify(d)); },
 
   getCategories() {
     const cats = this.load().categories;
