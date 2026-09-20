@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>时间管理大师</title>
-  <link rel="stylesheet" href="css/style.css?v=217">
+  <link rel="stylesheet" href="css/style.css?v=218">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <!-- PWA -->
@@ -29,7 +29,7 @@
         </button>
       </div>
       <span class="app-date" id="headerDate"></span>
-      <span style="position:absolute;right:6px;bottom:3px;font-size:.5rem;opacity:.5;letter-spacing:.05em">V2.17</span>
+      <span style="position:absolute;right:6px;bottom:3px;font-size:.5rem;opacity:.5;letter-spacing:.05em">V2.18</span>
     </header>
 
     <!-- ========== 主内容区 ========== -->
@@ -330,6 +330,31 @@
     </div>
   </div>
 
+  <!-- ========== 弹窗: 云端同步登录 ========== -->
+  <div class="modal-overlay" id="loginModal">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h3>登录同步账号</h3>
+        <button class="btn-icon modal-close" data-close="loginModal">
+          <svg width="20" height="20" viewBox="0 0 20 20"><path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:.75rem;color:var(--muted);margin-bottom:14px">登录后你的计划数据将在所有设备间自动同步。</p>
+        <div class="form-group">
+          <label>邮箱</label>
+          <input type="email" id="syncEmail" placeholder="you@example.com" autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label>密码</label>
+          <input type="password" id="syncPassword" placeholder="密码" autocomplete="current-password" onkeydown="if(event.key==='Enter'){event.preventDefault();doSyncLogin()}">
+        </div>
+        <p id="loginError" style="display:none;font-size:.75rem;margin-bottom:10px"></p>
+        <button type="button" class="btn-primary" style="width:100%;justify-content:center" onclick="doSyncLogin()">登录</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast -->
   <div class="toast-container" id="toastContainer"></div>
 
@@ -513,14 +538,14 @@
   </script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script src="https://static.cloudbase.net/cloudbase-js-sdk/latest/cloudbase.full.js"></script>
-  <script src="js/data.js?v=217"></script>
-  <script src="js/cloudSync.js?v=217"></script>
-  <script src="js/weeklyPlans.js?v=217"></script>
-  <script src="js/dailyPlans.js?v=217"></script>
-  <script src="js/timeline.js?v=217"></script>
-  <script src="js/weekView.js?v=217"></script>
-  <script src="js/stats.js?v=217"></script>
-  <script src="js/app.js?v=217"></script>
+  <script src="js/data.js?v=218"></script>
+  <script src="js/cloudSync.js?v=218"></script>
+  <script src="js/weeklyPlans.js?v=218"></script>
+  <script src="js/dailyPlans.js?v=218"></script>
+  <script src="js/timeline.js?v=218"></script>
+  <script src="js/weekView.js?v=218"></script>
+  <script src="js/stats.js?v=218"></script>
+  <script src="js/app.js?v=218"></script>
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/service-worker.js').then(function(reg) {
@@ -670,6 +695,31 @@
       try { Timeline.refresh(); } catch(e) {}
       try { WeekView.refresh(); } catch(e) {}
       try { if (typeof App !== 'undefined' && App.currentTab === 'stats' && typeof Stats !== 'undefined') Stats.refresh(); } catch(e) {}
+    }
+
+    /* ===== 云端同步登录 ===== */
+    function doSyncLogin() {
+      if (typeof CloudSync === 'undefined') { alert('应用正在加载，请稍后再试'); return; }
+      var email = document.getElementById('syncEmail').value.trim();
+      var pw = document.getElementById('syncPassword').value;
+      var errEl = document.getElementById('loginError');
+      if (!email || !pw) {
+        errEl.textContent = '请输入邮箱和密码';
+        errEl.style.color = '#ef4444';
+        errEl.style.display = 'block';
+        return;
+      }
+      errEl.textContent = '登录中…';
+      errEl.style.color = '#f59e0b';
+      errEl.style.display = 'block';
+      CloudSync.login(email, pw).then(function(msg) {
+        if (msg) {
+          errEl.textContent = msg;
+          errEl.style.color = '#ef4444';
+        } else {
+          if (typeof Toast !== 'undefined') Toast.show('登录成功，云端同步已开启');
+        }
+      });
     }
   </script>
 </body>

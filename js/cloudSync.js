@@ -16,13 +16,15 @@ const CloudSync = {
   PULL_GAP: 30000,                // 两次拉取最小间隔
 
   _db: null,
+  _auth: null,
+  app: null,
   _ready: false,
   _pulling: false,
   _pushing: false,
   _pushTimer: null,
   _lastPull: 0,
   _saveStyle: 0,                  // 0=未知 1=set直传 2=set({data}) 3=add指定_id
-  status: 'off',                  // off | init | online | sync | error
+  status: 'off',                  // off | wait | init | online | sync | error
 
   init() {
     if (typeof cloudbase === 'undefined') { this._setStatus('off'); return; }
@@ -38,23 +40,98 @@ const CloudSync = {
         region: this.REGION,
         accessKey: this.ACCESS_KEY,
       });
-      const auth = app.auth;
-      try { await auth.signInAnonymously(); } catch (e) { /* 可能已有会话，忽略 */ }
-      this._db = app.database();
-      this._ready = true;
-      this._setStatus('online');
-      await this.pull(true);
+      this.app = app;
+      this._auth = app.auth;
 
-      // 回到前台时拉取远端更新
-      document.addEventListener('visibilitychange', () => {
-        if (!document.hidden) this.pull(false);
-      });
-      // 每 60 秒拉取（仅页面可见时）
-      setInterval(() => { if (!document.hidden) this.pull(false); }, 60000);
+      const logged = await this._checkLogin();
+      if (!logged) {
+        // 会话过期或首次使用 → 弹出登录框
+        this._setStatus('wait');
+        this.showLogin();
+        return;
+      }
+      await this._startSync();
     } catch (e) {
-      console.warn('[CloudSync] init failed', e);
+      console.warn('[CloudSync] boot failed', e);
       this._setStatus('error');
     }
+  },
+
+  /* 检查本地会话是否有效（会话保存在本地，长期有效） */
+  async _checkLogin() {
+    try {
+      const r = await this._auth.getUser();
+      const u = r && r.data !== undefined ? r.data : r;
+      if (!u) return false;
+      const uid = u.id || u.userId || u.uid || (u.user && u.user.id);
+      return !!uid;
+    } catch (e) { return false; }
+  },
+
+  /* 登录成功后启动同步 */
+  async _startSync() {
+    this._db = this.app.database();
+    this._ready = true;
+    this._setStatus('online');
+    await this.pull(true);
+
+    // 回到前台时拉取远端更新
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) this.pull(false);
+    });
+    // 每 60 秒拉取（仅页面可见时）
+    setInterval(() => { if (!document.hidden) this.pull(false); }, 60000);
+  },
+
+  /* ===== 登录 / 登出 ===== */
+  showLogin() {
+    const m = document.getElementById('loginModal');
+    if (m) m.classList.add('active');
+    const errEl = document.getElementById('loginError');
+    if (errEl) errEl.style.display = 'none';
+    setTimeout(() => { const e = document.getElementById('syncEmail'); if (e) e.focus(); }, 200);
+  },
+
+  hideLogin() {
+    const m = document.getElementById('loginModal');
+    if (m) m.classList.remove('active');
+    const pw = document.getElementById('syncPassword');
+    if (pw) pw.value = '';
+  },
+
+  /* 返回 null=成功，字符串=错误信息 */
+  async login(email, password) {
+    if (!this._auth) {
+      try {
+        const app = cloudbase.init({ env: this.ENV, region: this.REGION, accessKey: this.ACCESS_KEY });
+        this.app = app;
+        this._auth = app.auth;
+      } catch (e) { return 'SDK 初始化失败，请刷新页面重试'; }
+    }
+    try {
+      const r = await this._auth.signInWithPassword({ email: email, password: password });
+      if (r && r.error) {
+        const msg = r.error.message || '登录失败，请检查邮箱和密码';
+        if (!/already|logged/i.test(msg)) return msg;
+      }
+    } catch (e) {
+      const msg = (e && e.message) || '登录失败，请检查网络';
+      if (!/already|logged/i.test(msg)) return msg;
+    }
+    this.hideLogin();
+    try { await this._startSync(); } catch (e) {
+      console.warn('[CloudSync] startSync failed', e);
+      return '登录成功但同步启动失败，请重试';
+    }
+    return null;
+  },
+
+  async logout() {
+    try { await this._auth.signOut(); } catch (e) {}
+    this._ready = false;
+    this._db = null;
+    this._setStatus('wait');
+    this.showLogin();
   },
 
   /* ===== 拉取云端 → 本地 ===== */
@@ -166,14 +243,21 @@ const CloudSync = {
     const el = document.getElementById('cloudSyncStatus');
     if (!el) return;
     const map = {
-      off:   ['云端同步未开启（等待配置）', '#9ca3af'],
+      off:   ['云端同步未配置', '#9ca3af'],
+      wait:  ['未登录，请先登录同步账号', '#f59e0b'],
       init:  ['云端连接中…', '#f59e0b'],
-      online:['云端同步已开启，自动进行', '#10b981'],
+      online:['已登录，云端自动同步中', '#10b981'],
       sync:  ['正在同步…', '#3b82f6'],
       error: ['同步异常，本地数据不受影响', '#ef4444'],
     };
     const m = map[this.status] || map.off;
-    el.innerHTML = '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + m[1] + ';margin-right:6px"></span><span style="color:' + m[1] + '">' + m[0] + '</span>';
+    let html = '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + m[1] + ';margin-right:6px"></span><span style="color:' + m[1] + '">' + m[0] + '</span>';
+    if (this.status === 'wait') {
+      html += ' <button onclick="CloudSync.showLogin()" style="margin-left:8px;padding:2px 10px;font-size:.7rem;border:1.5px solid #3b82f6;border-radius:8px;background:#fff;color:#3b82f6">登录</button>';
+    } else if (this.status === 'online' || this.status === 'sync') {
+      html += ' <a href="javascript:void(0)" onclick="if(confirm(\'退出登录后两台设备将不再同步，确定？\'))CloudSync.logout()" style="margin-left:8px;font-size:.7rem;color:#9ca3af">退出登录</a>';
+    }
+    el.innerHTML = html;
   },
 };
 

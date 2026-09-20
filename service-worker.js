@@ -1,4 +1,4 @@
-const CACHE = 'rr-time-v2.17';
+const CACHE = 'rr-time-v2.18';
 
 self.addEventListener('install', e => {
   self.skipWaiting();
